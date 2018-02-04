@@ -27,11 +27,21 @@ if ( is_dir( $taro_mu_dir ) ) {
  */
 function taro_mu_load_setting() {
 	static $settings = null;
-	$path = __DIR__ . '/taro-mu-setting.json';
 	if ( ! is_null( $settings ) ) {
 		return $settings;
 	}
-	if ( ! file_exists( $path ) ) {
+	// Seek directory.
+	$path = null;
+	foreach ( [
+		__DIR__ . '/taro-mu-setting.json',
+		get_template_directory() . '/taro-mu-setting.json',
+		get_stylesheet_directory() . '/taro-mu-setting.json',
+	] as $json ) {
+		if ( file_exists( $json ) ) {
+			$path = $json;
+		}
+	}
+	if ( ! $path ) {
 		return null;
 	}
 	$settings = json_decode( file_get_contents( $path ) );
