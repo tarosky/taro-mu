@@ -30,7 +30,7 @@ class TaroSyncWp extends WP_CLI_Command {
 			];
 			if ( isset( $setting['auth'] ) ) {
 				$args['headers'] = [
-					'Authorization' => 'Basic '.base64_encode("{$setting['auth']->user}:{$setting['auth']->password}"),
+					'Authorization' => 'Basic ' . base64_encode( "{$setting['auth']->user}:{$setting['auth']->password}" ),
 				];
 			}
 			$response = wp_remote_get( $setting['url'], $args );
@@ -40,7 +40,7 @@ class TaroSyncWp extends WP_CLI_Command {
 				throw new Exception( sprintf( 'Response is %d %s.', $response['response']['code'], get_status_header_desc( $response['response']['code'] ) ) );
 			}
 			WP_CLI::line( 'Donwnload finished' );
-			// Save tmp dir
+			// Save tmp dir.
 			$temp_dir  = ABSPATH . 'wp-content';
 			$temp_path = tempnam( $temp_dir, 'wp-' );
 			$temp_gz = $temp_path . '.tar.gz';
@@ -61,6 +61,7 @@ class TaroSyncWp extends WP_CLI_Command {
 				$target = ABSPATH . "wp-content";
 				$src    = "$unpacked_dir/{$dir}";
 				if ( ! is_dir( $src ) ) {
+					WP_CLI::warning( sprintf( 'No backup in %1$s.', $dir ) );
 					continue;
 				}
 				switch ( $dir ) {
@@ -77,14 +78,16 @@ class TaroSyncWp extends WP_CLI_Command {
 							}
 							// Check if this plugin is excluded.
 							if ( $this->is_excluded( $dir, $plugin_dir ) ) {
+								WP_CLI::line( sprintf( '[SKIP] %1$s in %2$s', $plugin_dir, $dir ) );
 								continue;
 							}
 							$plugin_dir = "{$src}/{$plugin_dir}";
 							$cmd = "cp -rf {$plugin_dir} {$target}/plugins";
+							exec( $cmd );
 						}
 						break;
 				}
-				WP_CLI::line( sprintf( '%s copied...', $unpacked_dir . '/' . $dir ) );
+				WP_CLI::line( sprintf( '[DONE] %s copied...',  $dir ) );
 			}
 
 			$from = untrailingslashit( $setting['home'] );
@@ -99,6 +102,7 @@ class TaroSyncWp extends WP_CLI_Command {
 
 			// Remove original dir.
 			exec("rm -rf {$unpacked_dir}");
+			exec("rm -rf {$temp_path}");
 
 			// Contents finished.
 			WP_CLI::success( 'Import finished!' );
@@ -148,7 +152,13 @@ class TaroSyncWp extends WP_CLI_Command {
 		$table = new \cli\Table();
 		$table->setHeaders( [ 'KEY', 'VALUE' ] );
 		foreach ( $setting as $key => $val ) {
-			$table->addRow( [ $key, $val ] );
+			if ( is_string( $val ) ) {
+				$table->addRow( [ $key, $val ] );
+			} elseif ( is_array( $val ) ) {
+				$table->addRow( [ $key, $val ? implode( ', ', $val ) : 'EMPTY ARRAY' ] );
+			} else {
+				$table->addRow( [ $key, gettype( $val ) ] );
+			}
 		}
 		$table->display();
 	}
